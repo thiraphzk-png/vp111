@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>มาลองทายกันดู - เกมถอดรหัสแนวคิดเชิงนามธรรม</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti for Victory Effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'Prompt', sans-serif;
+            user-select: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .pulse-btn {
+            animation: pulse-animation 2s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+            100% { transform: scale(1); }
+        }
+
+        .shake-animation {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .card-option {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-option:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        .card-selected {
+            ring: 4px solid #F59E0B;
+            border-color: #F59E0B !important;
+            background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 overflow-x-hidden">
+
+    <!-- Top Header Navigation Bar -->
+    <header class="w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-3 sm:p-4 sticky top-0 z-40 shadow-lg">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-500 text-slate-950 p-2 sm:p-2.5 rounded-2xl shadow-lg shadow-amber-500/20 font-bold">
+                    <i class="fa-solid fa-robot text-xl sm:text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg sm:text-2xl tracking-wide bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-300 bg-clip-text text-transparent">
+                        มาลองทายกันดู
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">เกมการศึกษาแนวคิดเชิงนามธรรม (วิทยากรถานวน ว 4.2 ม.1/1)</p>
+                </div>
+            </div>
+
+            <!-- Game Stats Display -->
+            <div id="top-stats" class="hidden flex items-center gap-3 sm:gap-6 bg-slate-900/80 px-3 sm:px-4 py-1.5 rounded-2xl border border-slate-800">
+                <div class="flex items-center gap-1.5 text-amber-400 font-bold text-xs sm:text-sm">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>ด่าน: <span id="current-level-text" class="text-white">1</span>/4</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-yellow-400 font-bold text-xs sm:text-sm">
+                    <i class="fa-solid fa-star"></i>
+                    <span id="score-text" class="text-white">0</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-rose-400 font-bold text-xs sm:text-sm">
+                    <i class="fa-solid fa-heart"></i>
+                    <span id="lives-text" class="text-white">3</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex items-center justify-center p-3 sm:p-6 max-w-5xl w-full mx-auto">
+
+        <!-- 1. START SCREEN -->
+        <div id="start-screen" class="w-full max-w-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden my-4">
+            <div class="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-12 -left-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10">
+                <div class="inline-block p-4 bg-gradient-to-tr from-amber-500 to-orange-400 rounded-3xl shadow-xl shadow-orange-500/20 mb-4">
+                    <i class="fa-solid fa-brain text-5xl text-slate-950"></i>
+                </div>
+                
+                <h2 class="text-3xl sm:text-5xl font-extrabold mb-3 bg-gradient-to-r from-amber-300 via-orange-300 to-yellow-200 bg-clip-text text-transparent">
+                    มาลองทายกันดู
+                </h2>
+                <p class="text-slate-300 text-sm sm:text-base mb-6 font-medium">
+                    ท้าทายสมอง คัดแยกข้อมูลสำคัญ และถอดรหัสแก้ปัญหาชีวิตจริง!
+                </p>
+
+                <!-- Rules Box -->
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 sm:p-6 text-left mb-6 space-y-3 text-xs sm:text-sm text-slate-300">
+                    <h3 class="text-amber-400 font-bold text-sm sm:text-base flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb"></i> วิธีเล่นและขั้นตอนกติกา:
+                    </h3>
+                    <ul class="space-y-2.5 text-slate-300">
+                        <li class="flex items-start gap-2">
+                            <span class="bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded text-xs">ตอนที่ 1</span>
+                            <span><b>เลือกการ์ดข้อมูลที่จำเป็น:</b> ทายและคัดแยกเฉพาะข้อมูลสำคัญ ตัดรายละเอียดที่ไม่เกี่ยวข้องออก</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="bg-cyan-500/20 text-cyan-400 font-bold px-2 py-0.5 rounded text-xs">ตอนที่ 2</span>
+                            <span><b>จัดเรียงอัลกอริทึม:</b> นำภาพขั้นตอนที่ทายถูกต้องมาเรียงลำดับการแก้ปัญหาให้สมบูรณ์</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <button id="btn-start-game" onclick="startGame()" class="pulse-btn w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-lg sm:text-xl rounded-2xl shadow-xl shadow-orange-500/30 transition-all flex items-center justify-center gap-3 mx-auto">
+                    <i class="fa-solid fa-gamepad"></i> เริ่มเล่นเกม!
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. GAMEPLAY SCREEN -->
+        <div id="gameplay-screen" class="hidden w-full flex-col gap-6 my-2">
+            
+            <!-- Scenario Header Display -->
+            <div class="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="phase-badge" class="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-full">
+                            เฟสที่ 1: เลือกเฉพาะภาพที่จำเป็น
+                        </span>
+                        <span id="scenario-category" class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full">
+                            สถานการณ์ชีวิตจริง
+                        </span>
+                    </div>
+                    <h2 id="scenario-title" class="text-xl sm:text-2xl font-extrabold text-white">
+                        หัวข้อสถานการณ์
+                    </h2>
+                    <p id="scenario-desc" class="text-xs sm:text-sm text-slate-300 mt-1">
+                        คำอธิบายโจทย์
+                    </p>
+                </div>
+            </div>
+
+            <!-- PHASE 1: Abstraction Image Cards Selection -->
+            <div id="phase1-container" class="space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-images"></i> ลองทายดูว่า... ภาพไหนบ้างคือ "ข้อมูลที่จำเป็น" ในการแก้ปัญหานี้?
+                    </h3>
+                    <span id="select-count" class="text-xs text-slate-400">เลือกแล้ว 0 ภาพ</span>
+                </div>
+
+                <!-- Cards Grid -->
+                <div id="cards-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                    <!-- Cards will be populated dynamically -->
+                </div>
+
+                <!-- Phase 1 Action -->
+                <div class="flex justify-end mt-4">
+                    <button id="btn-submit-phase1" onclick="submitPhase1()" class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-sm sm:text-base rounded-2xl shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                        <span>ยืนยันคำตอบ</span> <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PHASE 2: Algorithm Sequence Building -->
+            <div id="phase2-container" class="hidden space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-sm font-bold text-cyan-400 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i> นำขั้นตอนภาพที่ถูกต้อง มาเรียงลำดับอัลกอริทึมให้สมบูรณ์
+                    </h3>
+                </div>
+
+                <!-- Sequence Slots Area -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xl space-y-3">
+                    <p class="text-xs text-slate-400 mb-2">คลิกเลือกการ์ดขั้นตอนด้านล่างตามลำดับ ก่อน-หลัง (1 -> 2 -> 3)</p>
+                    <div id="sequence-slots" class="grid grid-cols-1 sm:grid-cols-3 gap-3 min-h-[120px]">
+                        <!-- Sequence cards will be put here -->
+                    </div>
+                </div>
+
+                <!-- Available Sequence Pool -->
+                <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-4">
+                    <p class="text-xs text-slate-400 mb-3">คลังการ์ดขั้นตอนที่ต้องจัดเรียง:</p>
+                    <div id="sequence-pool" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <!-- Available steps -->
+                    </div>
+                </div>
+
+                <!-- Phase 2 Action -->
+                <div class="flex justify-between items-center mt-4">
+                    <button onclick="resetSequence()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs sm:text-sm rounded-xl">
+                        <i class="fa-solid fa-rotate-left"></i> รีเซ็ตการเรียงลำดับ
+                    </button>
+                    <button id="btn-submit-phase2" onclick="submitPhase2()" class="px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                        <i class="fa-solid fa-check"></i> ตรวจสอบอัลกอริทึม
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 3. MODAL FEEDBACK / RESULT SCREEN -->
+        <div id="result-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center text-white shadow-2xl relative overflow-hidden animate-bounce-in">
+                
+                <div id="modal-icon-container" class="inline-block p-4 bg-amber-500/20 text-amber-400 rounded-full mb-3">
+                    <i id="modal-icon" class="fa-solid fa-trophy text-5xl"></i>
+                </div>
+
+                <h2 id="modal-title" class="text-2xl sm:text-3xl font-extrabold text-amber-400 mb-1">ถูกต้องยอดเยี่ยม!</h2>
+                <p id="modal-subtitle" class="text-xs sm:text-sm text-slate-300 mb-4">คุณถอดรหัสแนวคิดเชิงนามธรรมได้สำเร็จ</p>
+
+                <!-- Feedback Explanation Box -->
+                <div id="modal-feedback-box" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-left text-xs sm:text-sm space-y-2 mb-6 max-h-[180px] overflow-y-auto">
+                    <!-- Dynamic feedback content -->
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col gap-2">
+                    <button id="btn-next-step" onclick="handleModalNext()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2">
+                        <span id="btn-next-text">ไปต่อ</span> <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-3 text-xs text-slate-400 border-t border-slate-900 bg-slate-950/50">
+        สื่อการเรียนรู้วิทยากรถานวน | เกม "มาลองทายกันดู" แนวคิดเชิงนามธรรม (Abstraction)
+    </footer>
+
+    <script>
+        /* Scenarios with Visual Card Data */
+        const SCENARIOS = [
+            {
+                id: 1,
+                title: "ด่านที่ 1: การเดินทางด้วยรถไฟไปโรงเรียน 🚆",
+                desc: "โจทย์: ต้องการวางแผนเดินทางไปโรงเรียนให้ทันเวลา 08:00 น.",
+                cards: [
+                    { id: 'c1', label: 'เวลาตารางรถไฟ', icon: 'fa-clock', type: 'essential', desc: 'ข้อมูลเวลาออกและถึงจุดหมาย' },
+                    { id: 'c2', label: 'สถานีปลายทาง', icon: 'fa-map-location-dot', type: 'essential', desc: 'จุดหมายปลายทางที่ต้องลง' },
+                    { id: 'c3', label: 'สีของขบวนรถไฟ', icon: 'fa-palette', type: 'non-essential', desc: 'รายละเอียดความสวยงามภายนอก' },
+                    { id: 'c4', label: 'ยี่ห้อพัดลมบนรถ', icon: 'fa-fan', type: 'non-essential', desc: 'อุปกรณ์ส่วนเกินที่ไม่ส่งผลต่อเวลา' }
+                ],
+                steps: [
+                    { id: 's1', order: 1, label: '1. ตรวจสอบตารางเวลารถไฟ', icon: 'fa-calendar-check' },
+                    { id: 's2', order: 2, label: '2. ซื้อตั๋วและขึ้นรถไฟให้ทันเวลา', icon: 'fa-ticket' },
+                    { id: 's3', order: 3, label: '3. ลงสถานีปลายทางแล้วเดินเข้าโรงเรียน', icon: 'fa-school' }
+                ],
+                explanation: "ในการวางแผนเดินทาง เวลาตารางรถและสถานีปลายทางคือ 'ข้อมูลที่จำเป็น' ส่วนสีรถหรือยี่ห้อพัดลมเป็นรายละเอียดที่ตัดออกได้"
+            },
+            {
+                id: 2,
+                title: "ด่านที่ 2: สูตรการทำไข่เจียวทรงเครื่อง 🍳",
+                desc: "โจทย์: ต้องการเขียนขั้นตอนทำอาหารให้เพื่อนทอดไข่เจียวทานได้อร่อย",
+                cards: [
+                    { id: 'c1', label: 'ปริมาณไข่และเครื่องปรุง', icon: 'fa-egg', type: 'essential', desc: 'สัดส่วนวัตถุดิบหลัก' },
+                    { id: 'c2', label: 'ระดับไฟและเวลาทอด', icon: 'fa-fire', type: 'essential', desc: 'ความร้อนในการประกอบอาหาร' },
+                    { id: 'c3', label: 'สีของจานรอง', icon: 'fa-utensils', type: 'non-essential', desc: 'ภาชนะบรรจุที่ไม่มีผลต่อรสชาติ' },
+                    { id: 'c4', label: 'ลายของผ้ากันเปื้อน', icon: 'fa-shirt', type: 'non-essential', desc: 'เครื่องแต่งกายส่วนบุคคล' }
+                ],
+                steps: [
+                    { id: 's1', order: 1, label: '1. ตอกไข่และใส่เครื่องปรุงผสมให้เข้ากัน', icon: 'fa-bowl-rice' },
+                    { id: 's2', order: 2, label: '2. ตั้งกระทะเปิดไฟปานกลางจนน้ำมันร้อน', icon: 'fa-fire-burner' },
+                    { id: 's3', order: 3, label: '3. เทไข่ลงทอดจนเหลืองกรอบแล้วตักใส่จาน', icon: 'fa-plate-wheat' }
+                ],
+                explanation: "วัตถุดิบและระดับไฟคือแกนหลักในการทำอาหาร ส่วนสีของจานหรือลายผ้ากันเปื้อนเป็นข้อมูลที่ไม่ส่งผลต่อการปรุง"
+            },
+            {
+                id: 3,
+                title: "ด่านที่ 3: ระบบคัดแยกขยะในโรงเรียน ♻️",
+                desc: "โจทย์: คัดแยกขยะพลาสติกให้ถูกต้องตามประเภทเพื่อนำไปรีไซเคิล",
+                cards: [
+                    { id: 'c1', label: 'ประเภทวัสดุขยะ', icon: 'fa-box-archive', type: 'essential', desc: 'คุณลักษณะพลาสติก/แก้ว/กระดาษ' },
+                    { id: 'c2', label: 'สัญลักษณ์ถังขยะสี', icon: 'fa-dumpster', type: 'essential', desc: 'ประเภทถังขยะรองรับ' },
+                    { id: 'c3', label: 'ยี่ห้อสินค้าขวดน้ำ', icon: 'fa-bottle-water', type: 'non-essential', desc: 'ตราสินค้าโลโก้ภายนอก' },
+                    { id: 'c4', label: 'ความสวยงามของถุงขยะ', icon: 'fa-bag-shopping', type: 'non-essential', desc: 'สีและลวดลายของถุงบรรจุ' }
+                ],
+                steps: [
+                    { id: 's1', order: 1, label: '1. สังเกตประเภทวัสดุของขยะในมือ', icon: 'fa-magnifying-glass' },
+                    { id: 's2', order: 2, label: '2. มองหาสัญลักษณ์สีของถังขยะที่ถูกต้อง', icon: 'fa-eye' },
+                    { id: 's3', order: 3, label: '3. ทิ้งขยะลงในถังตรงตามประเภท', icon: 'fa-recycle' }
+                ],
+                explanation: "การคัดแยกขยะพิจารณาจากประเภทวัสดุและสีถังขยะ ส่วนยี่ห้อขวดน้ำหรือลวดลายถุงไม่จำเป็นต้องนำมาคิด"
+            },
+            {
+                id: 4,
+                title: "ด่านที่ 4: การจัดตารางอ่านหนังสือเตรียมสอบ 📚",
+                desc: "โจทย์: จัดตารางทบทวนวิชาวิทยาศาสตร์และคณิตศาสตร์ก่อนวันสอบ",
+                cards: [
+                    { id: 'c1', label: 'วันและเวลาที่สอบ', icon: 'fa-calendar-days', type: 'essential', desc: 'กำหนดการสอบจริง' },
+                    { id: 'c2', label: 'หัวข้อเนื้อหาที่ออกสอบ', icon: 'fa-book-bookmark', type: 'essential', desc: 'ขอบเขตข้อมูลง่าย-ยาก' },
+                    { id: 'c3', label: 'สีด้ามปากกาไฮไลท์', icon: 'fa-pen-clip', type: 'non-essential', desc: 'อุปกรณ์ตกแต่งตัวหนังสือ' },
+                    { id: 'c4', label: 'ชื่อร้านค้าที่ซื้อหนังสือ', icon: 'fa-store', type: 'non-essential', desc: 'สถานที่จัดซื้อหนังสือ' }
+                ],
+                steps: [
+                    { id: 's1', order: 1, label: '1. ตรวจสอบวันสอบและหัวข้อเนื้อหา', icon: 'fa-list-check' },
+                    { id: 's2', order: 2, label: '2. แบ่งเวลาทบทวนตามความยากง่าย', icon: 'fa-hourglass-half' },
+                    { id: 's3', order: 3, label: '3. ทำแบบทดสอบทบทวนความเข้าใจ', icon: 'fa-file-pen' }
+                ],
+                explanation: "การวางแผนอ่านหนังสือใช้กำหนดการสอบและหัวข้อเนื้อหาเป็นหลัก ส่วนสีปากกาหรือร้านหนังสือเป็นองค์ประกอบภายนอก"
+            }
+        ];
+
+        // Global Game States
+        let currentLevel = 0;
+        let score = 0;
+        let lives = 3;
+        let selectedCards = new Set();
+        let userSequence = [];
+        let modalState = 'phase1_pass'; // 'phase1_pass', 'phase2_pass', 'fail'
+
+        // Web Audio Effects
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playAudio(type) {
+            try {
+                if (!audioCtx) audioCtx = new AudioContext();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'click') {
+                    osc.frequency.setValueAtTime(450, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'win') {
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc.frequency.setValueAtTime(783.99, now + 0.2);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'fail') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(110, now + 0.25);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (e) {}
+        }
+
+        // Initialize Game
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('gameplay-screen').classList.remove('hidden');
+            document.getElementById('gameplay-screen').classList.add('flex');
+            document.getElementById('top-stats').classList.remove('hidden');
+            document.getElementById('top-stats').classList.add('flex');
+
+            currentLevel = 0;
+            score = 0;
+            lives = 3;
+            updateHUD();
+            loadScenario(currentLevel);
+        }
+
+        function updateHUD() {
+            document.getElementById('current-level-text').innerText = currentLevel + 1;
+            document.getElementById('score-text').innerText = score;
+            document.getElementById('lives-text').innerText = lives;
+        }
+
+        // Load Scenario Data
+        function loadScenario(idx) {
+            const sc = SCENARIOS[idx];
+            selectedCards.clear();
+            userSequence = [];
+
+            document.getElementById('scenario-title').innerText = sc.title;
+            document.getElementById('scenario-desc').innerText = sc.desc;
+
+            // Setup Phase 1 UI
+            document.getElementById('phase1-container').classList.remove('hidden');
+            document.getElementById('phase2-container').classList.add('hidden');
+            document.getElementById('phase-badge').className = "bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-full";
+            document.getElementById('phase-badge').innerText = "เฟสที่ 1: เลือกเฉพาะภาพที่จำเป็น";
+
+            renderCardsGrid();
+        }
+
+        // Render Cards Grid for Phase 1
+        function renderCardsGrid() {
+            const sc = SCENARIOS[currentLevel];
+            const grid = document.getElementById('cards-grid');
+            grid.innerHTML = '';
+
+            sc.cards.forEach(card => {
+                const isSelected = selectedCards.has(card.id);
+                const cardEl = document.createElement('div');
+                cardEl.className = `card-option bg-slate-900 border-2 ${isSelected ? 'card-selected border-amber-500' : 'border-slate-800'} rounded-2xl p-4 cursor-pointer flex flex-col items-center text-center gap-2 relative overflow-hidden shadow-lg`;
+                cardEl.onclick = () => toggleCardSelection(card.id);
+
+                cardEl.innerHTML = `
+                    <div class="w-12 h-12 rounded-2xl ${isSelected ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-400'} flex items-center justify-center text-2xl transition-all">
+                        <i class="fa-solid ${card.icon}"></i>
+                    </div>
+                    <h4 class="font-bold text-sm text-white mt-1">${card.label}</h4>
+                    <p class="text-xs text-slate-400">${card.desc}</p>
+                    <div class="absolute top-2 right-2 text-xs">
+                        <i class="fa-solid ${isSelected ? 'fa-circle-check text-amber-400' : 'fa-circle text-slate-700'} text-base"></i>
+                    </div>
+                `;
+
+                grid.appendChild(cardEl);
+            });
+
+            document.getElementById('select-count').innerText = `เลือกแล้ว ${selectedCards.size} ภาพ`;
+        }
+
+        function toggleCardSelection(id) {
+            playAudio('click');
+            if (selectedCards.has(id)) {
+                selectedCards.delete(id);
+            } else {
+                selectedCards.add(id);
+            }
+            renderCardsGrid();
+        }
+
+        // Submit Phase 1
+        function submitPhase1() {
+            const sc = SCENARIOS[currentLevel];
+            const essentialIds = sc.cards.filter(c => c.type === 'essential').map(c => c.id);
+            
+            const isCorrect = essentialIds.length === selectedCards.size && 
+                              essentialIds.every(id => selectedCards.has(id));
+
+            if (isCorrect) {
+                playAudio('win');
+                score += 250;
+                updateHUD();
+                modalState = 'phase1_pass';
+                showModal("ถูกต้องยอดเยี่ยม! 🎉", "คุณเลือกภาพข้อมูลที่จำเป็นได้ถูกต้อง", sc.explanation, "ไปต่อเฟสที่ 2");
+            } else {
+                playAudio('fail');
+                lives--;
+                updateHUD();
+                if (lives <= 0) {
+                    showGameOverModal();
+                } else {
+                    modalState = 'fail';
+                    showModal("ยังไม่ถูกต้องนะ! ❌", "คุณเลือกภาพข้อมูลไม่ครบหรือมีข้อมูลที่ไม่จำเป็นติดมาด้วย", "ลองคิดทบทวนดูอีกครั้งว่า ข้อมูลใดที่ขาดไม่ได้จริงๆ ในการแก้ปัญหานี้", "ลองใหม่อีกครั้ง");
+                }
+            }
+        }
+
+        // Setup Phase 2 Algorithm Sequence
+        function startPhase2() {
+            document.getElementById('phase1-container').classList.add('hidden');
+            document.getElementById('phase2-container').classList.remove('hidden');
+            document.getElementById('phase-badge').className = "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-bold px-3 py-1 rounded-full";
+            document.getElementById('phase-badge').innerText = "เฟสที่ 2: จัดเรียงลำดับขั้นตอน (Algorithm)";
+
+            userSequence = [];
+            renderSequenceArea();
+        }
+
+        function renderSequenceArea() {
+            const sc = SCENARIOS[currentLevel];
+            const slotsContainer = document.getElementById('sequence-slots');
+            const poolContainer = document.getElementById('sequence-pool');
+
+            slotsContainer.innerHTML = '';
+            poolContainer.innerHTML = '';
+
+            // Render User Selected Sequence
+            for (let i = 0; i < sc.steps.length; i++) {
+                const step = userSequence[i];
+                const slotEl = document.createElement('div');
+                slotEl.className = `border-2 border-dashed ${step ? 'border-cyan-500 bg-cyan-950/20' : 'border-slate-800 bg-slate-950/40'} rounded-2xl p-3 flex items-center justify-between min-h-[70px]`;
+
+                if (step) {
+                    slotEl.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="w-7 h-7 rounded-full bg-cyan-500 text-slate-950 font-bold text-xs flex items-center justify-center">${i+1}</span>
+                            <div class="text-left">
+                                <p class="text-xs font-bold text-white">${step.label}</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid ${step.icon} text-cyan-400 text-lg"></i>
+                    `;
+                } else {
+                    slotEl.innerHTML = `<span class="text-xs text-slate-600 font-medium">ขั้นตอนที่ ${i+1} (ว่าง)</span>`;
+                }
+
+                slotsContainer.appendChild(slotEl);
+            }
+
+            // Render Pool Cards (Shuffled or available)
+            sc.steps.forEach(step => {
+                const isUsed = userSequence.some(s => s && s.id === step.id);
+                if (!isUsed) {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = "bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-2xl p-3 cursor-pointer flex items-center justify-between shadow-md transition-all";
+                    cardEl.onclick = () => selectStep(step);
+                    cardEl.innerHTML = `
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid ${step.icon} text-cyan-400 text-base"></i>
+                            <span class="text-xs font-bold text-slate-200">${step.label}</span>
+                        </div>
+                        <i class="fa-solid fa-plus text-slate-500 text-xs"></i>
+                    `;
+                    poolContainer.appendChild(cardEl);
+                }
+            });
+        }
+
+        function selectStep(step) {
+            playAudio('click');
+            const sc = SCENARIOS[currentLevel];
+            if (userSequence.length < sc.steps.length) {
+                userSequence.push(step);
+                renderSequenceArea();
+            }
+        }
+
+        function resetSequence() {
+            playAudio('click');
+            userSequence = [];
+            renderSequenceArea();
+        }
+
+        // Submit Phase 2
+        function submitPhase2() {
+            const sc = SCENARIOS[currentLevel];
+            if (userSequence.length < sc.steps.length) {
+                alert("กรุณาเลือกจัดเรียงขั้นตอนให้ครบทุกช่องก่อนครับ!");
+                return;
+            }
+
+            const isCorrect = userSequence.every((step, idx) => step.order === idx + 1);
+
+            if (isCorrect) {
+                playAudio('win');
+                score += 250;
+                updateHUD();
+                
+                try {
+                    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+                } catch(e) {}
+
+                modalState = 'phase2_pass';
+                showModal("ถอดรหัสสำเร็จ! 🏆", `ผ่านด่านที่ ${currentLevel + 1} เรียบร้อยแล้ว`, sc.explanation, currentLevel < SCENARIOS.length - 1 ? "ไปด่านถัดไป" : "สรุปผลคะแนน");
+            } else {
+                playAudio('fail');
+                lives--;
+                updateHUD();
+                if (lives <= 0) {
+                    showGameOverModal();
+                } else {
+                    modalState = 'fail_p2';
+                    showModal("ลำดับยังไม่ถูกต้อง! ❌", "ลองพิจารณาขั้นตอนก่อน-หลังใหม่อีกครั้ง", "อัลกอริทึมที่ดีต้องมีการทำงานเรียงลำดับที่เป็นระบบและถูกต้องตามขั้นตอน", "ลองจัดเรียงใหม่");
+                }
+            }
+        }
+
+        // Show Modal Dialog
+        function showModal(title, subtitle, explanation, buttonText) {
+            const modal = document.getElementById('result-modal');
+            const iconContainer = document.getElementById('modal-icon-container');
+            const modalIcon = document.getElementById('modal-icon');
+
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-subtitle').innerText = subtitle;
+            document.getElementById('btn-next-text').innerText = buttonText;
+
+            const box = document.getElementById('modal-feedback-box');
+            box.innerHTML = `
+                <p class="font-bold text-amber-400 mb-1"><i class="fa-solid fa-circle-info"></i> คำอธิบาย:</p>
+                <p class="text-slate-300">${explanation}</p>
+            `;
+
+            if (modalState.includes('pass')) {
+                iconContainer.className = "inline-block p-4 bg-amber-500/20 text-amber-400 rounded-full mb-3";
+                modalIcon.className = "fa-solid fa-trophy text-5xl";
+            } else {
+                iconContainer.className = "inline-block p-4 bg-rose-500/20 text-rose-400 rounded-full mb-3";
+                modalIcon.className = "fa-solid fa-triangle-exclamation text-5xl";
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function showGameOverModal() {
+            modalState = 'game_over';
+            showModal("เกมจบลงแล้ว! 💔", "คุณใช้หัวใจครบแล้ว", "อย่าเพิ่งท้อถอย! การเรียนรู้เกิดจากการทดลองและปรับปรุงแก้ไข ลองเริ่มเล่นใหม่อีกครั้งนะครับ", "เริ่มเกมใหม่");
+        }
+
+        // Handle Modal Advance Button
+        function handleModalNext() {
+            document.getElementById('result-modal').classList.add('hidden');
+
+            if (modalState === 'phase1_pass') {
+                startPhase2();
+            } else if (modalState === 'phase2_pass') {
+                if (currentLevel < SCENARIOS.length - 1) {
+                    currentLevel++;
+                    loadScenario(currentLevel);
+                } else {
+                    // Completed All Levels
+                    modalState = 'all_completed';
+                    showModal("ยินดีด้วย! 🎓", "คุณพิชิตเกม 'มาลองทายกันดู' ครบทุกด่าน!", `คุณได้รับคะแนนรวมทั้งหมด ${score} คะแนน มีทักษะคิดเชิงนามธรรมที่ยอดเยี่ยมมาก`, "เล่นอีกครั้ง");
+                }
+            } else if (modalState === 'fail') {
+                // Retry Phase 1
+                renderCardsGrid();
+            } else if (modalState === 'fail_p2') {
+                // Retry Phase 2
+                resetSequence();
+            } else if (modalState === 'game_over' || modalState === 'all_completed') {
+                startGame();
+            }
+        }
+    </script>
+</body>
+</html>
